@@ -1,4 +1,9 @@
-# Flutter zoom widget
+# Modified Zoom Widget 
+- Adds ability to draw at the same time by catching the input and adding a callback.
+
+
+Original README:
+## Flutter zoom widget
 
 <img src="https://raw.githubusercontent.com/semakers/zoom-widget/master/header.png" data-canonical-src="https://raw.githubusercontent.com/semakers/zoom-widget/master/header.png" width="300" height="200" />
 

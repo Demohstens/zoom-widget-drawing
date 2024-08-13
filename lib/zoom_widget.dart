@@ -37,6 +37,7 @@ class Zoom extends StatefulWidget {
     this.scrollWeight = 10,
     this.transformationController,
     this.zoomSensibility = 1.0,
+    this.onDrawUpdate,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
         super(key: key);
@@ -66,6 +67,7 @@ class Zoom extends StatefulWidget {
   final double scrollWeight;
   final TransformationController? transformationController;
   final double zoomSensibility;
+  final Function(Offset)? onDrawUpdate;
 
   static Vector3 getNearestPointOnLine(Vector3 point, Vector3 l1, Vector3 l2) {
     final double lengthSquared = math.pow(l2.x - l1.x, 2.0).toDouble() +
@@ -520,6 +522,10 @@ class _ZoomState extends State<Zoom>
     final Offset focalPointScene = _transformationController!.toScene(
       details.localFocalPoint,
     );
+    if (details.pointerCount == 1) {
+      widget.onDrawUpdate?.call(focalPointScene);
+      return;
+    }
 
     if (_gestureType == _GestureType.pan) {
       _gestureType = _getGestureType(details);
