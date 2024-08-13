@@ -38,6 +38,9 @@ class Zoom extends StatefulWidget {
     this.transformationController,
     this.zoomSensibility = 1.0,
     this.onDrawUpdate,
+    this.onDrawEnd,
+    this.onDrawStart,
+    this.enableDrawing = true,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
         super(key: key);
@@ -67,7 +70,12 @@ class Zoom extends StatefulWidget {
   final double scrollWeight;
   final TransformationController? transformationController;
   final double zoomSensibility;
+  // Added Custom Drawing logic
   final Function(Offset)? onDrawUpdate;
+  final Function()? onDrawEnd;
+  final Function(Offset)? onDrawStart;
+
+  final bool enableDrawing;
 
   static Vector3 getNearestPointOnLine(Vector3 point, Vector3 l1, Vector3 l2) {
     final double lengthSquared = math.pow(l2.x - l1.x, 2.0).toDouble() +
@@ -199,6 +207,7 @@ class _ZoomState extends State<Zoom>
   Offset? _doubleTapFocalPoint;
   bool doubleTapZoomIn = true;
   bool firstDraw = true;
+  bool _drawing = false;
 
   static const double _kDrag = 0.0000135;
 
@@ -515,6 +524,10 @@ class _ZoomState extends State<Zoom>
     _referenceFocalPoint = _transformationController!.toScene(
       details.localFocalPoint,
     );
+    if (widget.enableDrawing) {
+      _drawing = true;
+      widget.onDrawStart?.call(_referenceFocalPoint!);
+    }
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
@@ -522,7 +535,7 @@ class _ZoomState extends State<Zoom>
     final Offset focalPointScene = _transformationController!.toScene(
       details.localFocalPoint,
     );
-    if (details.pointerCount == 1) {
+    if (_drawing && widget.enableDrawing) {
       widget.onDrawUpdate?.call(focalPointScene);
       return;
     }
@@ -580,6 +593,13 @@ class _ZoomState extends State<Zoom>
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
+    if (_drawing) {
+      _drawing = false;
+      if (widget.enableDrawing) {
+        widget.onDrawEnd?.call();
+      }
+    }
+
     _scaleStart = null;
 
     _animation?.removeListener(_onAnimate);
