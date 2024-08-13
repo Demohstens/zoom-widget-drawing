@@ -535,9 +535,14 @@ class _ZoomState extends State<Zoom>
     final Offset focalPointScene = _transformationController!.toScene(
       details.localFocalPoint,
     );
+    if (details.pointerCount != 1) {
+      _drawing = false;
+    }
     if (_drawing && widget.enableDrawing) {
       widget.onDrawUpdate?.call(focalPointScene);
       return;
+    } else {
+      _drawing = false;
     }
 
     if (_gestureType == _GestureType.pan) {
@@ -593,11 +598,9 @@ class _ZoomState extends State<Zoom>
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    if (_drawing) {
-      _drawing = false;
-      if (widget.enableDrawing) {
-        widget.onDrawEnd?.call();
-      }
+    _drawing = false;
+    if (widget.enableDrawing) {
+      widget.onDrawEnd?.call();
     }
 
     _scaleStart = null;
