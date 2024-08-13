@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -44,6 +45,8 @@ class Zoom extends StatefulWidget {
     this.onLongPressStart,
     this.onLongPressEnd,
     this.onLongPressMoveUpdate,
+    this.onDoubleTap,
+    this.drawCooldown = 75,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
         super(key: key);
@@ -80,6 +83,10 @@ class Zoom extends StatefulWidget {
   final Function(LongPressStartDetails)? onLongPressStart;
   final Function(LongPressEndDetails)? onLongPressEnd;
   final Function(LongPressMoveUpdateDetails)? onLongPressMoveUpdate;
+  final Function()? onDoubleTap;
+
+  /// The cooldown in milliseconds between drawing updates.
+  int drawCooldown = 75;
 
   final bool enableDrawing;
 
@@ -214,6 +221,15 @@ class _ZoomState extends State<Zoom>
   bool doubleTapZoomIn = true;
   bool firstDraw = true;
   bool _drawing = false;
+  bool _scaling = false;
+  bool _drawingOnCooldown = false;
+
+  late void Function() _scalingCallback = () {
+    _drawingOnCooldown = true;
+    Timer(Duration(milliseconds: widget.drawCooldown), () {
+      _drawingOnCooldown = false;
+    });
+  };
 
   static const double _kDrag = 0.0000135;
 
@@ -517,22 +533,28 @@ class _ZoomState extends State<Zoom>
   }
 
   void _onScaleStart(ScaleStartDetails details) {
-    if (_controller.isAnimating) {
-      _controller.stop();
-      _controller.reset();
-      _animation?.removeListener(_onAnimate);
-      _animation = null;
-    }
-
     _gestureType = null;
     _panAxis = null;
     _scaleStart = _transformationController!.value.getMaxScaleOnAxis();
     _referenceFocalPoint = _transformationController!.toScene(
       details.localFocalPoint,
     );
-    if (widget.enableDrawing) {
-      _drawing = true;
-      widget.onDrawStart?.call(_referenceFocalPoint!);
+    if (widget.enableDrawing && details.pointerCount == 1) {
+      if (_drawingOnCooldown) {
+        return;
+      } else {
+        _drawing = true;
+        widget.onDrawStart?.call(details.localFocalPoint);
+      }
+    } else {
+      _drawing = false;
+      _scaling = true;
+      if (_controller.isAnimating) {
+        _controller.stop();
+        _controller.reset();
+        _animation?.removeListener(_onAnimate);
+        _animation = null;
+      }
     }
   }
 
@@ -541,73 +563,77 @@ class _ZoomState extends State<Zoom>
     final Offset focalPointScene = _transformationController!.toScene(
       details.localFocalPoint,
     );
-    if (details.pointerCount != 1) {
-      _drawing = false;
-    }
+    // if (details.pointerCount != 1) {
+    //   _drawing = false;
+    // }
     if (_drawing && widget.enableDrawing) {
       widget.onDrawUpdate?.call(focalPointScene);
       return;
-    } else {
-      _drawing = false;
     }
+    if (_scaling) {
+      if (_gestureType == _GestureType.pan) {
+        _gestureType = _getGestureType(details);
+      } else {
+        _gestureType ??= _getGestureType(details);
+      }
 
-    if (_gestureType == _GestureType.pan) {
-      _gestureType = _getGestureType(details);
-    } else {
-      _gestureType ??= _getGestureType(details);
-    }
+      switch (_gestureType!) {
+        case _GestureType.scale:
+          assert(_scaleStart != null);
 
-    switch (_gestureType!) {
-      case _GestureType.scale:
-        assert(_scaleStart != null);
+          final double desiredScale = _scaleStart! * details.scale;
+          final double scaleChange = desiredScale / scale;
+          _transformationController!.value = _matrixScale(
+            _transformationController!.value,
+            scaleChange,
+          );
 
-        final double desiredScale = _scaleStart! * details.scale;
-        final double scaleChange = desiredScale / scale;
-        _transformationController!.value = _matrixScale(
-          _transformationController!.value,
-          scaleChange,
-        );
+          final Offset focalPointSceneScaled =
+              _transformationController!.toScene(
+            details.localFocalPoint,
+          );
 
-        final Offset focalPointSceneScaled = _transformationController!.toScene(
-          details.localFocalPoint,
-        );
+          _transformationController!.value = _matrixTranslate(
+            _transformationController!.value,
+            focalPointSceneScaled - _referenceFocalPoint!,
+          );
 
-        _transformationController!.value = _matrixTranslate(
-          _transformationController!.value,
-          focalPointSceneScaled - _referenceFocalPoint!,
-        );
+          final Offset focalPointSceneCheck =
+              _transformationController!.toScene(
+            details.localFocalPoint,
+          );
+          if (_round(_referenceFocalPoint!) != _round(focalPointSceneCheck)) {
+            _referenceFocalPoint = focalPointSceneCheck;
+          }
+          break;
 
-        final Offset focalPointSceneCheck = _transformationController!.toScene(
-          details.localFocalPoint,
-        );
-        if (_round(_referenceFocalPoint!) != _round(focalPointSceneCheck)) {
-          _referenceFocalPoint = focalPointSceneCheck;
-        }
-        break;
+        case _GestureType.pan:
+          assert(_referenceFocalPoint != null);
 
-      case _GestureType.pan:
-        assert(_referenceFocalPoint != null);
+          _panAxis ??= _getPanAxis(_referenceFocalPoint!, focalPointScene);
 
-        _panAxis ??= _getPanAxis(_referenceFocalPoint!, focalPointScene);
-
-        final Offset translationChange =
-            focalPointScene - _referenceFocalPoint!;
-        _transformationController!.value = _matrixTranslate(
-          _transformationController!.value,
-          translationChange,
-        );
-        _referenceFocalPoint = _transformationController!.toScene(
-          details.localFocalPoint,
-        );
-        break;
+          final Offset translationChange =
+              focalPointScene - _referenceFocalPoint!;
+          _transformationController!.value = _matrixTranslate(
+            _transformationController!.value,
+            translationChange,
+          );
+          _referenceFocalPoint = _transformationController!.toScene(
+            details.localFocalPoint,
+          );
+          break;
+      }
     }
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    _drawing = false;
-    if (widget.enableDrawing) {
+    if (_drawing) {
       widget.onDrawEnd?.call();
+    } else {
+      _scalingCallback();
     }
+    _drawing = false;
+    _scaling = false;
 
     _scaleStart = null;
 
@@ -682,6 +708,10 @@ class _ZoomState extends State<Zoom>
   }
 
   void _onDoubleTap() {
+    if (widget.onDoubleTap != null) {
+      widget.onDoubleTap!();
+      return;
+    }
     if (!_scaleController.isAnimating && widget.doubleTapZoom) {
       doubleTapZoomIn = _transformationController!.value.getMaxScaleOnAxis() <
           widget.maxScale;
