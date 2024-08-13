@@ -41,6 +41,9 @@ class Zoom extends StatefulWidget {
     this.onDrawEnd,
     this.onDrawStart,
     this.enableDrawing = true,
+    this.onLongPressStart,
+    this.onLongPressEnd,
+    this.onLongPressMoveUpdate,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
         super(key: key);
@@ -74,6 +77,9 @@ class Zoom extends StatefulWidget {
   final Function(Offset)? onDrawUpdate;
   final Function()? onDrawEnd;
   final Function(Offset)? onDrawStart;
+  final Function(LongPressStartDetails)? onLongPressStart;
+  final Function(LongPressEndDetails)? onLongPressEnd;
+  final Function(LongPressMoveUpdateDetails)? onLongPressMoveUpdate;
 
   final bool enableDrawing;
 
@@ -1017,6 +1023,9 @@ class _ZoomState extends State<Zoom>
                 onScaleStart: _onScaleStart,
                 onScaleUpdate: _onScaleUpdate,
                 onDoubleTap: _onDoubleTap,
+                onLongPressStart: widget.onLongPressStart,
+                onLongPressEnd: widget.onLongPressEnd,
+                onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
                 onTap: widget.onTap,
                 child: widget.enableScroll
                     ? Stack(
