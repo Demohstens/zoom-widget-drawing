@@ -46,6 +46,7 @@ class Zoom extends StatefulWidget {
     this.onLongPressEnd,
     this.onLongPressMoveUpdate,
     this.onDoubleTap,
+    this.onTapUp,
     this.drawCooldown = 75,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
@@ -77,6 +78,7 @@ class Zoom extends StatefulWidget {
   final TransformationController? transformationController;
   final double zoomSensibility;
   // Added Custom Drawing logic
+  final Function(TapUpDetails)? onTapUp;
   final Function(Offset)? onDrawUpdate;
   final Function()? onDrawEnd;
   final Function(Offset)? onDrawStart;
@@ -1057,6 +1059,7 @@ class _ZoomState extends State<Zoom>
                 onLongPressEnd: widget.onLongPressEnd,
                 onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
                 onTap: widget.onTap,
+                onTapUp: widget.onTapUp,
                 child: widget.enableScroll
                     ? Stack(
                         children: [
