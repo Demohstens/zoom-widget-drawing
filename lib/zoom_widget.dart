@@ -47,6 +47,7 @@ class Zoom extends StatefulWidget {
     this.onLongPressMoveUpdate,
     this.onDoubleTap,
     this.onTapUp,
+    this.onTapDown,
     this.drawCooldown = 75,
   })  : assert(maxScale > 0),
         assert(!maxScale.isNaN),
@@ -82,10 +83,11 @@ class Zoom extends StatefulWidget {
   final Function(Offset)? onDrawUpdate;
   final Function()? onDrawEnd;
   final Function(Offset)? onDrawStart;
-  final Function(LongPressStartDetails)? onLongPressStart;
+  final Function(Offset)? onLongPressStart;
   final Function(LongPressEndDetails)? onLongPressEnd;
   final Function(LongPressMoveUpdateDetails)? onLongPressMoveUpdate;
   final Function()? onDoubleTap;
+  final Function(Offset)? onTapDown;
 
   /// The cooldown in milliseconds between drawing updates.
   int drawCooldown = 75;
@@ -534,6 +536,21 @@ class _ZoomState extends State<Zoom>
     }
   }
 
+  // Custom Drawing and selection methods
+  void _onTapDown(TapDownDetails details) {
+    _referenceFocalPoint = _transformationController!.toScene(
+      details.localPosition,
+    );
+    widget.onTapDown?.call(_referenceFocalPoint!);
+  }
+
+  void _onLongPressStart(LongPressStartDetails details) {
+    _referenceFocalPoint = _transformationController!.toScene(
+      details.localPosition,
+    );
+    widget.onLongPressStart?.call(_referenceFocalPoint!);
+  }
+
   void _onScaleStart(ScaleStartDetails details) {
     _gestureType = null;
     _panAxis = null;
@@ -546,7 +563,7 @@ class _ZoomState extends State<Zoom>
         return;
       } else {
         _drawing = true;
-        widget.onDrawStart?.call(details.localFocalPoint);
+        widget.onDrawStart?.call(_referenceFocalPoint!);
       }
     } else {
       _drawing = false;
@@ -1055,9 +1072,10 @@ class _ZoomState extends State<Zoom>
                 onScaleStart: _onScaleStart,
                 onScaleUpdate: _onScaleUpdate,
                 onDoubleTap: _onDoubleTap,
-                onLongPressStart: widget.onLongPressStart,
+                onLongPressStart: _onLongPressStart,
                 onLongPressEnd: widget.onLongPressEnd,
                 onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
+                onTapDown: _onTapDown,
                 onTap: widget.onTap,
                 onTapUp: widget.onTapUp,
                 child: widget.enableScroll
