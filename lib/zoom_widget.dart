@@ -281,6 +281,7 @@ class _ZoomState extends State<Zoom>
     }
   }
 
+
   double _getScrollBarLength(Matrix4 matrix,
       {required _ScrollType scrollType}) {
     double percent = 0;
@@ -541,14 +542,24 @@ class _ZoomState extends State<Zoom>
     _referenceFocalPoint = _transformationController!.toScene(
       details.localPosition,
     );
-    widget.onTapDown?.call(_referenceFocalPoint!);
+    if (_referenceFocalPoint != null ) {
+      if (_boundaryRect.contains(_referenceFocalPoint!)) {
+      widget.onTapDown?.call(_referenceFocalPoint!);
+      }
+    }
+    
+    
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
     _referenceFocalPoint = _transformationController!.toScene(
       details.localPosition,
     );
-    widget.onLongPressStart?.call(_referenceFocalPoint!);
+    if (_referenceFocalPoint != null ) {
+      if (_boundaryRect.contains(_referenceFocalPoint!)) {
+          widget.onLongPressStart?.call(_referenceFocalPoint!);
+      }
+    }
   }
 
   void _onScaleStart(ScaleStartDetails details) {
@@ -562,10 +573,15 @@ class _ZoomState extends State<Zoom>
       if (_drawingOnCooldown) {
         return;
       } else {
-        _drawing = true;
-        widget.onDrawStart?.call(_referenceFocalPoint!);
+        if (_referenceFocalPoint!= null ) {
+          if (_boundaryRect.contains(_referenceFocalPoint!)) {
+            _drawing = true;
+            widget.onDrawStart?.call(_referenceFocalPoint!);
+            return;
+          } 
+        } 
       }
-    } else {
+    } 
       _drawing = false;
       _scaling = true;
       if (_controller.isAnimating) {
@@ -574,7 +590,7 @@ class _ZoomState extends State<Zoom>
         _animation?.removeListener(_onAnimate);
         _animation = null;
       }
-    }
+    
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
@@ -586,8 +602,12 @@ class _ZoomState extends State<Zoom>
     //   _drawing = false;
     // }
     if (_drawing && widget.enableDrawing) {
-      widget.onDrawUpdate?.call(focalPointScene);
-      return;
+      if (focalPointScene!= null ) {
+        if (_boundaryRect.contains(focalPointScene)) {
+          widget.onDrawUpdate?.call(focalPointScene);
+          return;
+        }
+      };
     }
     if (_scaling) {
       if (_gestureType == _GestureType.pan) {
