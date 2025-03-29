@@ -1095,6 +1095,7 @@ class _ZoomState extends State<Zoom>
                 onLongPressStart: _onLongPressStart,
                 onLongPressEnd: widget.onLongPressEnd,
                 onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
+                // onTertiaryLongPressMoveUpdate: (d) {_onScaleUpdate(d as ScaleUpdateDetails);},
                 onTapDown: _onTapDown,
                 onTap: widget.onTap,
                 onTapUp: widget.onTapUp,
