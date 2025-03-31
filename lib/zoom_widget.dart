@@ -72,7 +72,7 @@ class Zoom extends StatefulWidget {
   final Function(double, double)? onScaleUpdate;
   final Function(Offset)? onPanUpPosition;
   final Function(bool)? onMinZoom;
-  final Function()? onTap;
+  final Function()?onTap;
   final double opacityScrollBars;
   final double radiusScrollBars;
   final double scrollWeight;
@@ -574,7 +574,7 @@ class _ZoomState extends State<Zoom>
         return;
       } else {
         if (_referenceFocalPoint!= null ) {
-          if (_boundaryRect.contains(_referenceFocalPoint!)) {
+          if (_boundaryRect.contains(_referenceFocalPoint!) ) {
             _drawing = true;
             widget.onDrawStart?.call(_referenceFocalPoint!);
             return;
@@ -1032,6 +1032,8 @@ class _ZoomState extends State<Zoom>
     });
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     Widget child;
@@ -1095,7 +1097,29 @@ class _ZoomState extends State<Zoom>
                 onLongPressStart: _onLongPressStart,
                 onLongPressEnd: widget.onLongPressEnd,
                 onLongPressMoveUpdate: widget.onLongPressMoveUpdate,
-                // onTertiaryLongPressMoveUpdate: (d) {_onScaleUpdate(d as ScaleUpdateDetails);},
+                onTertiaryTapDown: (TapDownDetails details) {
+                  widget.enableDrawing == false;
+                  _referenceFocalPoint = _transformationController!.toScene(
+                    details.localPosition,
+                  );
+                  _gestureType = _GestureType.pan;
+                  _scaling = true;
+                },
+                // onTertiaryTapUp: (details) => widget.enableDrawing == true,
+                // onTertiaryTapCancel: () => widget.enableDrawing == true,
+                onTertiaryLongPressMoveUpdate: (details) {
+                  if (_transformationController != null) {
+                    final Offset delta = details.offsetFromOrigin * 0.01; // Added dampening factor
+                    _transformationController!.value = _matrixTranslate(
+                      _transformationController!.value,
+                      delta,
+                    );
+                  }
+                },
+                onTertiaryLongPressUp: () {
+                  _scaling = false;
+                  _gestureType = null;
+                },
                 onTapDown: _onTapDown,
                 onTap: widget.onTap,
                 onTapUp: widget.onTapUp,
